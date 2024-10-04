@@ -1,0 +1,12 @@
+x64-linux/
+x64-linux/include/
+x64-linux/include/nonstd/
+x64-linux/include/nonstd/expected.hpp
+x64-linux/share/
+x64-linux/share/expected-lite/
+x64-linux/share/expected-lite/copyright
+x64-linux/share/expected-lite/expected-lite-config-version.cmake
+x64-linux/share/expected-lite/expected-lite-config.cmake
+x64-linux/share/expected-lite/expected-lite-targets.cmake
+x64-linux/share/expected-lite/vcpkg.spdx.json
+x64-linux/share/expected-lite/vcpkg_abi_info.txt

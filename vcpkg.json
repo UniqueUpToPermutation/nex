@@ -1,0 +1,8 @@
+{
+  "dependencies": [
+    "expected-lite",
+    "glfw3",
+    "glm",
+    "plog"
+  ]
+}
