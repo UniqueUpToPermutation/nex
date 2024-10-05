@@ -3,6 +3,7 @@
     "expected-lite",
     "glfw3",
     "glm",
-    "plog"
+    "plog",
+    "im3d"
   ]
 }

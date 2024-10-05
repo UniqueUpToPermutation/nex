@@ -38,6 +38,11 @@ std::ostream& nex::operator<<(std::ostream& os, const MissingUniformError& err) 
     return os;
 }
 
+std::ostream& nex::operator<<(std::ostream& os, const ShaderCompilationError& err) {
+    os << "Failed to compile shader: " << err.path;
+    return os;
+}
+
 std::ostream& nex::operator<<(std::ostream& os, const Error& err) {
     std::visit([&err, &os](auto const& obj) {
         if constexpr (std::is_same_v<std::decay_t<decltype(obj)>, std::monostate>) {

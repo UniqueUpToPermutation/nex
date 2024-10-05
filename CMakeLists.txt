@@ -13,6 +13,7 @@ find_package(glm CONFIG REQUIRED)
 find_package(glfw3 CONFIG REQUIRED)
 find_package(plog CONFIG REQUIRED)
 find_package(expected-lite CONFIG REQUIRED)
+find_package(unofficial-im3d CONFIG REQUIRED)
 
 add_subdirectory(tools)
 add_subdirectory(core)

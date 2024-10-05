@@ -74,6 +74,7 @@
         "streambuf": "cpp",
         "thread": "cpp",
         "variant": "cpp",
-        "expected": "cpp"
+        "expected": "cpp",
+        "*.hlsl": "cpp"
     }
 }

@@ -7,6 +7,7 @@
 #include <unordered_set>
 #include <set>
 #include <sstream>
+#include <regex>
 
 namespace fs = std::filesystem;
 
@@ -18,64 +19,44 @@ struct PathHasher {
 	}
 };
 
-set<string> important_ext = {
-	".psh",
-	".vsh",
-	".json",
-	".hlsl",
-	".csh",
-	".gsh",
-    ".glsl",
-	".vs",
-	".fs",
-	".gs"
-};
-
-void write_into_lookup(
+std::string GetFileUid(
 	const std::filesystem::path& base,
-	const fs::directory_entry& path,
-	unordered_map<std::filesystem::path, string, PathHasher>* map, ofstream& out) {
+	const std::filesystem::path& path) {
 	
+	auto s = std::filesystem::relative(path, base).string();
+	std::replace(s.begin(), s.end(), '.', '_');
+	std::replace(s.begin(), s.end(), '/', '_');
+	std::replace(s.begin(), s.end(), '\\', '_');
+
 	stringstream ss;
-
-	ss << "g_" << std::filesystem::relative(path.path(), base).string() << "_data";
-
-	string name = ss.str();
-	std::replace(name.begin(), name.end(), '.', '_');
-	std::replace(name.begin(), name.end(), '/', '_');
-	out << "std::string_view " << name << " = R\"(";
-	ifstream f(path.path());
-	if (!f.is_open()) {
-		stringstream err_ss;
-		err_ss << "Failed to open file: " << path.path();
-		throw std::runtime_error(err_ss.str());
-	}
-
-	std::string str((std::istreambuf_iterator<char>(f)),
-		std::istreambuf_iterator<char>());
-
-	out << str << ")\";";
-	out << "\n\n";
-
-	(*map)[path.path()] = name;
+	ss << "g_" << s << "_data";
+	return ss.str();
 }
 
-void find_files(
+void FindFiles(
 	const std::filesystem::path& base,
 	const fs::directory_iterator& it,
+	const std::unordered_set<string>& importantExt,
 	std::vector<std::filesystem::path>& output) {
 	for (const auto& entry : it) {
 		if (entry.is_regular_file()) {
-			if (important_ext.find(entry.path().extension().string()) != important_ext.end()) {
+			if (importantExt.find(entry.path().extension().string()) != importantExt.end()) {
 				output.emplace_back(entry.path());
 			}
 		} else if (entry.is_directory()) {
-			find_files(base, fs::directory_iterator(entry.path()), output);
+			FindFiles(base, fs::directory_iterator(entry.path()), importantExt, output);
 		}
 	}
 }
 
-void expand_file(
+void FindFiles(
+	const std::filesystem::path& base,
+	const std::unordered_set<string>& importantExt,
+	std::vector<std::filesystem::path>& output) {
+	FindFiles(base, fs::directory_iterator(base), importantExt, std::ref(output));
+}
+
+void ExpandFile(
 	std::filesystem::path const& path,
 	std::unordered_map<std::filesystem::path, std::string, PathHasher> const& corpus,
 	std::unordered_set<std::filesystem::path>& alreadyVisited,
@@ -105,19 +86,19 @@ void expand_file(
 		while (include_pos != std::string::npos) {
 
 			current_line += std::count(
-				&contents.at(last_include_pos), 
-				&contents.at(include_pos), '\n');
+				contents.begin() + last_include_pos, 
+				contents.begin() + include_pos, '\n');
 
-			size_t endLineIndex = contents.find('\n', include_pos);
+			size_t endLineIndex = std::min(contents.find('\n', include_pos), contents.size());
 			bool bGlobalSearch = false;
 
 			auto quotesIt = std::find(
-				&contents.at(include_pos),
-				&contents.at(endLineIndex), '\"');
+				contents.begin() + include_pos,
+				contents.begin() + endLineIndex, '\"');
 
 			ss << contents.substr(last_include_pos, include_pos - last_include_pos);
 
-			if (quotesIt == &contents.at(endLineIndex)) {
+			if (quotesIt == contents.begin() + endLineIndex) {
 				std::stringstream ss;
 				ss << path.string() << ": Include detected without include file!";
 				throw std::runtime_error(ss.str());
@@ -126,43 +107,37 @@ void expand_file(
 				size_t endIndx;
 				size_t startIndx;
 
-				startIndx = quotesIt - &contents.at(0) + 1;
+				startIndx = quotesIt - contents.begin() + 1;
 				endIndx = contents.find('\"', startIndx);
-				bGlobalSearch = false;
 				
 				if (endIndx == std::string::npos) {
-					if (warningOut) {
-						*warningOut << sourceStr << 
+					std::cout << path.string() << 
 							": Warning: unmatched quote in #include!\n";
-					}
-					return {};
+					return;
 				}
 
 				last_include_pos = endIndx + 1;
 
 				std::filesystem::path includeSource = contents.substr(startIndx, endIndx - startIndx);
-				std::filesystem::path nextPath = source.parent_path();
+				std::filesystem::path nextPath = path.parent_path();
 
 				if (bGlobalSearch) {
-					auto err = Load(includeSource, fileLoader, defaults, overrides, streamOut,
-						warningOut, output, bAddLineNumbers, alreadyVisited);
+					ExpandFile(includeSource, corpus, alreadyVisited, output);
 
 				} else {
 					includeSource = nextPath / includeSource;
-
-					auto err = Load(includeSource, fileLoader, defaults, overrides, streamOut,
-						warningOut, output, bAddLineNumbers, alreadyVisited);
+					ExpandFile(includeSource, corpus, alreadyVisited, output);
 				}
 
 				ss << std::endl << "\n#line " << current_line + 1 
-					<< " \"" << sourceStr << "\"\n"; // Reset line numbers
+					<< " \"" << path.string() << "\"\n"; // Reset line numbers
 			}
 
 			include_pos = contents.find("#include", include_pos + 1);
 		}
 
 		ss << contents.substr(last_include_pos);
-		return {};
+		return;
 	} else {
 		std::stringstream ss;
 		ss << "Invalid include " << path.string();
@@ -170,30 +145,96 @@ void expand_file(
 	}
 }
 
+void ExpandFile(
+	std::filesystem::path const& path,
+	std::unordered_map<std::filesystem::path, std::string, PathHasher> const& corpus,
+	std::stringstream& output
+) { 
+	std::unordered_set<std::filesystem::path> alreadyVisited;
+	ExpandFile(path, corpus, std::ref(alreadyVisited), std::ref(output));
+}
+
 int main(int argc, char* argv[])
 {   
-	if (argc < 4) {
+	std::vector<const char*> arg(&argv[0], &argv[argc]);
+
+	if (arg.size() < 4) {
 		throw std::runtime_error("Incorrect number of runtime arguments!");
 	}
 
-	std::string function_name = argv[3];
+	std::string function_name = arg[3];
 
-	string path(argv[1]);
-	ofstream f_out(argv[2]);
-	unordered_map<std::filesystem::path, string, PathHasher> map;
-	f_out << "#include <okami/embed.hpp>\n";
-	f_out << "\n";
+	string basePath(arg[1]);
+	ofstream outFile(arg[2]);
 
-	std::vector<std::filesystem::path> files;
-	find_files(path, fs::directory_iterator(path), std::ref(files));
-
-	
-
-	f_out << "void " << function_name << "(okami::file_map_t& map) {\n";
-	for (auto& it : map) {
-		auto rel = std::filesystem::relative(it.first, path);
-		f_out << "\tmap[\"" << rel.string() << "\"] = " << it.second << ";\n";
+	if (!outFile.is_open()) {
+		std::stringstream ss;
+		ss << "Failed to open " << arg[2] << "!";
+		throw std::runtime_error(ss.str());
 	}
-	f_out << "}" << endl;
+	
+	outFile << "#include <nex/embed.hpp>\n";
+	outFile << "\n";
+
+	// Arguments after #3 are the file extensions to embed.
+	auto importantExt = [&]() {
+		std::unordered_set<string> result;
+		for (int i = 4; i < arg.size(); ++i) {
+			result.emplace(arg[i]);
+		}
+		return result;
+	}();
+
+	// File all files with the specified extensions
+	std::vector<std::filesystem::path> files;
+	FindFiles(basePath, importantExt, std::ref(files));
+
+	// Open all files in the directory
+	auto unexpandedCorpus = [&]() { 
+		unordered_map<std::filesystem::path, string, PathHasher> result;
+		for (auto file : files) {
+			std::ifstream s(file);
+
+			if (!s.is_open()) {
+				std::stringstream ss;
+				ss << "Could not open file " << file.string();
+				throw std::runtime_error(ss.str());
+			}
+
+			std::stringstream ss;
+			ss << s.rdbuf();
+			result[file] = ss.str();
+		}
+		return result;
+	}();
+
+	// Expand files by running the include import preprocessor
+	auto expandedCorpus = [&]() {
+		unordered_map<std::filesystem::path, string, PathHasher> result;
+
+		for (auto [path, contents] : unexpandedCorpus) {
+			std::stringstream ss;
+			ExpandFile(path, unexpandedCorpus, std::ref(ss));
+			result[path] = ss.str();
+		}
+
+		return result;
+	}();
+
+	// Write global variables with expanded file contents
+	for (auto const& [path, expandedContents] : expandedCorpus) {
+		outFile << "constexpr std::string_view " << GetFileUid(basePath, path) << " = R\"(\n";
+		outFile << expandedContents;
+		outFile << "\n)\";";
+		outFile << "\n\n";
+	}
+
+	// Write function to retrieve contents of all expanded files
+	outFile << "void " << function_name << "(nex::file_map_t& map) {\n";
+	for (auto const& [path, expandedContents] : expandedCorpus) {
+		auto rel = std::filesystem::relative(path, basePath);
+		outFile << "\tmap[\"" << rel.string() << "\"] = " << GetFileUid(basePath, path) << ";\n";
+	}
+	outFile << "}" << endl;
 	return 0;
 } 

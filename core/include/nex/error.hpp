@@ -28,6 +28,10 @@ namespace nex {
         std::string description;
     };
 
+    struct ShaderCompilationError {
+        std::string path;
+    };
+
     struct MultipleErrors {
         std::vector<Error> errors;
     };
@@ -42,12 +46,14 @@ namespace nex {
     std::ostream& operator<<(std::ostream& os, const MultipleErrors& err);
     std::ostream& operator<<(std::ostream& os, const InvalidPathError& err);
     std::ostream& operator<<(std::ostream& os, const MissingUniformError& err);
+    std::ostream& operator<<(std::ostream& os, const ShaderCompilationError& err);
 
     using ErrorDetails = std::variant<
         std::monostate, 
         GlfwError,
         RuntimeError,
         StringError,
+        ShaderCompilationError,
         InvalidPathError,
         MissingUniformError,
         MultipleErrors>;
