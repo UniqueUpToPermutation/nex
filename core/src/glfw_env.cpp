@@ -110,15 +110,15 @@ Error GlfwEnvironment::MessagePump() {
     _lastTime = newTime;
 
     // Update glfw
-    _error = {};
+    _error = Error::Ok();
     glfwPollEvents();
-    NEX_ERR_RETURN(_error);
-    return {};
+    return _error;
 }
 
 double GlfwEnvironment::GetTime() const {
     return _lastTime;
 }
+
 double GlfwEnvironment::GetDeltaTime() const {
     return _deltaTime;
 }
@@ -126,10 +126,17 @@ double GlfwEnvironment::GetDeltaTime() const {
 bool GlfwEnvironment::IsSurfaceDirty() const {
     return _surfaceDirty;
 }
+
 void GlfwEnvironment::ResetSurfaceDirty() {
     _surfaceDirty = false;
 }
 
-GLFWwindow* GlfwEnvironment::GetWindow() {
+GLFWwindow* GlfwEnvironment::GetWindow() const {
     return _window.get();
+}
+
+glm::vec2 GlfwEnvironment::GetContentScale() const {
+    glm::vec2 scale;
+    glfwGetWindowContentScale(GetWindow(), &scale.x, &scale.y);
+    return scale;
 }

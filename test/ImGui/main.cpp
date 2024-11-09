@@ -25,7 +25,7 @@ Error Run() {
     ImGuiIO& io = ImGui::GetIO();
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
-    io.FontGlobalScale = 2.0f;
+    io.FontGlobalScale = (env.GetContentScale().x + env.GetContentScale().y) / 2.0f;
 
     ImGui_ImplGlfw_InitForOther(env.GetWindow(), true);
 

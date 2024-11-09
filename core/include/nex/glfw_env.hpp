@@ -54,6 +54,7 @@ namespace nex {
         bool IsSurfaceDirty() const;
         void ResetSurfaceDirty();
 
-        GLFWwindow* GetWindow();
+        glm::vec2 GetContentScale() const;
+        GLFWwindow* GetWindow() const;
     };
 }
