@@ -20,7 +20,8 @@ target_include_directories(nex-core PUBLIC ${SHADER_DIR})
 target_link_libraries(nex-core PUBLIC glm::glm)
 target_link_libraries(nex-core PUBLIC glfw)
 target_link_libraries(nex-core PUBLIC plog::plog)
-target_link_libraries(nex-core PUBLIC 
+target_link_libraries(nex-core PUBLIC
+    Diligent-GraphicsAccessories
     Diligent-GraphicsEngineVk-shared 
     Diligent-TargetPlatform 
     Diligent-PlatformInterface
@@ -29,4 +30,5 @@ target_link_libraries(nex-core PUBLIC
 )
 target_link_libraries(nex-core PUBLIC nonstd::expected-lite)
 target_link_libraries(nex-core PUBLIC unofficial::im3d::im3d)
+target_link_libraries(nex-core PUBLIC imgui::imgui)
 
