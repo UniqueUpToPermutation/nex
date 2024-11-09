@@ -11,6 +11,8 @@
 #endif
 #endif
 
+#define Z_FLIP 1.0
+
 // Input structures shared with C++ code
 struct CameraAttribs {
     float4x4 mView;

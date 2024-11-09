@@ -11,9 +11,10 @@
 #include <GLFW/glfw3native.h>
 
 using namespace nex;
+using namespace nex::gfx;
 using namespace dg;
 
-Expected<GfxInitResult> nex::GfxInit(GLFWwindow* window) {
+Expected<GfxInitResult> nex::gfx::GfxInit(GLFWwindow* window) {
     auto* pFactoryVk = dg::GetEngineFactoryVk();
 
 #if PLATFORM_LINUX
@@ -25,6 +26,8 @@ Expected<GfxInitResult> nex::GfxInit(GLFWwindow* window) {
     GfxInitResult result;
     EngineVkCreateInfo engineCI;
     SwapChainDesc scDesc;
+
+    engineCI.Features.GeometryShaders = DEVICE_FEATURE_STATE_ENABLED;
 
     pFactoryVk->CreateDeviceAndContextsVk(engineCI, result.device.RawDblPtr(), result.context.RawDblPtr());
     NEX_EXP_RETURN_IF(!result.device || !result.context, 

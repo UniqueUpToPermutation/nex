@@ -16,14 +16,15 @@ namespace nex {
         };
     };
 
-	typedef std::unordered_map<std::filesystem::path, std::string_view, embed::PathHash> file_map_t;
+	typedef std::unordered_map<std::filesystem::path, const char*, embed::PathHash> file_map_t;
 	typedef std::function<void(file_map_t&)> embedded_file_loader_t;
 
 	class IVirtualFileSystem {
 	public:
 		virtual ~IVirtualFileSystem() = default;
 
-		virtual Expected<std::string_view> Find(const std::filesystem::path& source) const = 0;
+		virtual Expected<const char*> FindCStr(const std::filesystem::path& source) const = 0;
+		Expected<std::string_view> Find(const std::filesystem::path& source) const;
 	};
 
 	class EmbeddedFileLoader : public IVirtualFileSystem {
@@ -43,6 +44,6 @@ namespace nex {
 
         EmbeddedFileLoader(const embedded_file_loader_t& factory);
 
-		Expected<std::string_view> Find(const std::filesystem::path& source) const override;
+		Expected<const char*> FindCStr(const std::filesystem::path& source) const override;
 	};
 }

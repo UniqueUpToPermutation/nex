@@ -223,18 +223,20 @@ int main(int argc, char* argv[])
 
 	// Write global variables with expanded file contents
 	for (auto const& [path, expandedContents] : expandedCorpus) {
-		outFile << "constexpr std::string_view " << GetFileUid(basePath, path) << " = R\"(\n";
+		outFile << "constexpr const char* " << GetFileUid(basePath, path) << " = R\"(\n";
 		outFile << expandedContents;
 		outFile << "\n)\";";
 		outFile << "\n\n";
 	}
 
 	// Write function to retrieve contents of all expanded files
+	outFile << "namespace nex {\n";
 	outFile << "void " << function_name << "(nex::file_map_t& map) {\n";
 	for (auto const& [path, expandedContents] : expandedCorpus) {
 		auto rel = std::filesystem::relative(path, basePath);
 		outFile << "\tmap[\"" << rel.string() << "\"] = " << GetFileUid(basePath, path) << ";\n";
 	}
+	outFile << "}\n";
 	outFile << "}" << endl;
 	return 0;
 } 

@@ -6,14 +6,15 @@
 using namespace nex;
 
 Error Run() {
-    auto env = GlfwEnvironment::Create();
-    NEX_ERR_RETURN(env);
+    Error err;
 
-    while (!env->ShouldClose()) {
-        env->MessagePump();
+    auto env = NEX_ERR_UNWRAP(GlfwEnvironment::Create(), err);
+
+    while (!env.ShouldClose()) {
+        env.MessagePump();
     }
 
-    return {};
+    return err;
 }
 
 int main() {

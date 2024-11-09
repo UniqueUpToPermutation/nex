@@ -13,7 +13,7 @@
 #include <string>
 #include <filesystem>
 
-namespace nex {
+namespace nex::gfx {
 	namespace dg = Diligent;
 
 	struct EmbeddedShaderParams {
@@ -29,4 +29,6 @@ namespace nex {
         dg::IRenderDevice& device,
 		const EmbeddedShaderParams& params,
 		IVirtualFileSystem& fileLoader);
+
+	EmbeddedFileLoader GetEmbeddedShaders();
 }

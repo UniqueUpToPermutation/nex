@@ -6,38 +6,39 @@
 #include <cstring>
 
 
-namespace nex {
+namespace nex::gfx {
     namespace dg = Diligent;
 
     template <typename T>
 	class StaticUniformBuffer {
 	private:
 		dg::RefCntAutoPtr<dg::IBuffer> 	_buffer;
-		size_t							_count;
 
 	public:
-        StaticUniformBuffer() = default;
-		StaticUniformBuffer(
-            dg::IRenderDevice* device,
-            dg::IDeviceContext* context,
-            const std::vector<T>& data) : 
-				_count(data.size()) {
+		static Expected<StaticUniformBuffer<T>> Create(
+            dg::IRenderDevice& device,
+            dg::IDeviceContext& context,
+            const std::vector<T>& data) {
 
 			dg::BufferDesc desc;
 			desc.Name           = "Static Uniform Buffer";
-			desc.Size  		    = sizeof(T) * _count;
+			desc.Size  		    = sizeof(T) * data.size();
 			desc.Usage          = dg::USAGE_IMMUTABLE;
 			desc.BindFlags      = dg::BIND_UNIFORM_BUFFER;
 			desc.CPUAccessFlags = dg::CPU_ACCESS_NONE;
 
             dg::BufferData dgData;
-            dgData.DataSize        = sizeof(T) * _count;
-            dgData.pContext        = context;
+            dgData.DataSize        = sizeof(T) * data.size();
+            dgData.pContext        = &context;
             dgData.pData           = &data[0];
 
             dg::IBuffer* buf = nullptr;
-			device->CreateBuffer(desc, &dgData, &buf);
-            _buffer.Attach(buf);
+			device.CreateBuffer(desc, &dgData, &buf);
+			NEX_EXP_RETURN_IF(buf == nullptr, RuntimeError{"Failed to create static uniform buffer!"});
+
+			StaticUniformBuffer<T> result;
+            result._buffer.Attach(buf);
+			return result;
 		}
 
 		inline dg::IBuffer* Get() {
@@ -45,7 +46,7 @@ namespace nex {
 		}
 
 		inline size_t Count() {
-			return _count;
+			return _buffer->GetDesc().Size / sizeof(T);
 		}
 	};
 
@@ -53,15 +54,11 @@ namespace nex {
 	class DynamicUniformBuffer {
 	private:
 		dg::RefCntAutoPtr<dg::IBuffer> _buffer;
-		size_t _count;
 
 	public:
-        DynamicUniformBuffer() = default;
-		DynamicUniformBuffer(
-			dg::IRenderDevice* device, 
-			const uint count = 1) : 
-			_count(count) {
-
+		static Expected<DynamicUniformBuffer<T>> Create(
+			dg::IRenderDevice& device, 
+			const uint count = 1) {
 			dg::BufferDesc desc;
 			desc.Name           	= "Dynamic Uniform Buffer";
 			desc.Size  		  	    = sizeof(T) * count;
@@ -70,25 +67,29 @@ namespace nex {
 			desc.CPUAccessFlags 	= dg::CPU_ACCESS_WRITE;
 
             dg::IBuffer* buf = nullptr;
-			device->CreateBuffer(desc, nullptr, &buf);
-            _buffer.Attach(buf);
+			device.CreateBuffer(desc, nullptr, &buf);
+			NEX_EXP_RETURN_IF(buf == nullptr, RuntimeError{"Failed to create dynamic uniform buffer!"});
+
+			DynamicUniformBuffer<T> result;
+            result._buffer.Attach(buf);
+			return result;
 		}
 
 		inline size_t Count() const {
-			return _count;
+			return _buffer->GetDesc().Size / sizeof(T);
 		}
 
 		inline dg::IBuffer* Get() {
 			return _buffer.RawPtr();
 		}
 
-		inline void Write(dg::IDeviceContext* context, const T& t) {
-			dg::MapHelper<T> data(context, _buffer, dg::MAP_WRITE, dg::MAP_FLAG_DISCARD);
+		inline void Write(dg::IDeviceContext& context, const T& t) {
+			dg::MapHelper<T> data(&context, _buffer, dg::MAP_WRITE, dg::MAP_FLAG_DISCARD);
 			*data = t;
 		}
 
-		inline void Write(dg::IDeviceContext* context, const T t[], const uint count) {
-			dg::MapHelper<T> data(context, _buffer, dg::MAP_WRITE, dg::MAP_FLAG_DISCARD);
+		inline void Write(dg::IDeviceContext& context, const T t[], const uint count) {
+			dg::MapHelper<T> data(&context, _buffer, dg::MAP_WRITE, dg::MAP_FLAG_DISCARD);
 			std::memcpy(data, t, sizeof(T) * count);
 		}
 	};
@@ -97,14 +98,11 @@ namespace nex {
 	class DynamicStructuredBuffer {
 	private:
 		dg::RefCntAutoPtr<dg::IBuffer> _buffer;
-		size_t _count;
 
 	public:
-		DynamicStructuredBuffer() = default;
-		DynamicStructuredBuffer(
-			dg::IRenderDevice* device, 
-			const uint count) : 
-			_count(count) {
+		Expected<DynamicStructuredBuffer<T>> Create(
+			dg::IRenderDevice& device, 
+			const uint count) {
 
 			dg::BufferDesc desc;
 			desc.Name           		= "Dyanmic Structured Buffer";
@@ -116,12 +114,16 @@ namespace nex {
 			desc.Mode 				    = dg::BUFFER_MODE::BUFFER_MODE_STRUCTURED;
 
             dg::IBuffer* buf = nullptr;
-			device->CreateBuffer(desc, nullptr, &buf);
-            _buffer.Attach(buf);
+			device.CreateBuffer(desc, nullptr, &buf);
+			NEX_EXP_RETURN_IF(buf == nullptr, RuntimeError{"Failed to create dynamic structured buffer!"});
+
+			DynamicStructuredBuffer<T> result;
+            result._buffer.Attach(buf);
+			return result;
 		}
 
 		inline size_t Count() const {
-			return _count;
+			return _buffer->GetDesc().Size / sizeof(T);
 		}
 
 		inline dg::IBuffer* Get() {
@@ -132,13 +134,13 @@ namespace nex {
 			return _buffer->GetDefaultView(dg::BUFFER_VIEW_SHADER_RESOURCE);
 		}
 
-		inline void Write(dg::IDeviceContext* context, const T& t) {
-			dg::MapHelper<T> data(context, _buffer, dg::MAP_WRITE, dg::MAP_FLAG_DISCARD);
+		inline void Write(dg::IDeviceContext& context, const T& t) {
+			dg::MapHelper<T> data(&context, _buffer, dg::MAP_WRITE, dg::MAP_FLAG_DISCARD);
 			*data = t;
 		}
 
-		inline void Write(dg::IDeviceContext* context, const T t[], const uint count) {
-			dg::MapHelper<T> data(context, _buffer, dg::MAP_WRITE, dg::MAP_FLAG_DISCARD);
+		inline void Write(dg::IDeviceContext& context, const T t[], const uint count) {
+			dg::MapHelper<T> data(&context, _buffer, dg::MAP_WRITE, dg::MAP_FLAG_DISCARD);
 			std::memcpy(data, t, sizeof(T) * count);
 		}
 	};

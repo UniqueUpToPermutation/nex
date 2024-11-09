@@ -2,6 +2,7 @@
 #include <nex/embed_shader.hpp>
 
 using namespace nex;
+using namespace nex::gfx;
 
 Expected<Im3dShaders> Im3dShaders::Create(dg::IRenderDevice& device, IVirtualFileSystem& fileSystem) {
     Im3dShaders result;
@@ -248,11 +249,7 @@ Expected<Im3dPipeline> Im3dPipeline::Create(
     return result;
 }
 
-Im3dModule::Im3dModule(dg::IRenderDevice& device, 
-        uint bufferSize) :
-    _geometryBuffer(nullptr),
-    _bufferSize(bufferSize) {
-
+Expected<Im3dModule> Im3dModule::Create(dg::IRenderDevice& device, uint bufferSize) {
     dg::BufferDesc CBDesc;
     CBDesc.Name 			= "Im3d Geometry Buffer";
     CBDesc.Size 			= sizeof(Im3d::VertexData) * bufferSize;
@@ -262,12 +259,22 @@ Im3dModule::Im3dModule(dg::IRenderDevice& device,
 
     dg::IBuffer* geoBuf = nullptr;
     device.CreateBuffer(CBDesc, nullptr, &geoBuf);
-    _geometryBuffer.Attach(geoBuf);
+    NEX_EXP_RETURN_IF(geoBuf == nullptr, RuntimeError{"Failed to create Im3d Buffer!"});
+
+    Im3dModule module;
+    module._geometryBuffer.Attach(geoBuf);
+    return module;
+}
+
+uint Im3dModule::GetBufferCount() const {
+    return _geometryBuffer->GetDesc().Size / sizeof(Im3d::VertexData);
 }
 
 void Im3dModule::Draw(dg::IDeviceContext& deviceContext,
     Im3dPipeline& pipeline,
     Im3d::Context& im3dContext) {
+
+    uint bufferCount = GetBufferCount();
     uint drawListCount = im3dContext.getDrawListCount();
 
     dg::RefCntAutoPtr<dg::IPipelineState> currentPipelineState;
@@ -314,7 +321,7 @@ void Im3dModule::Draw(dg::IDeviceContext& deviceContext,
 
         uint currentIndx = 0;
         while (currentIndx < drawList->m_vertexCount) {
-            uint vertsToRender = std::min(_bufferSize, drawList->m_vertexCount - currentIndx);
+            uint vertsToRender = std::min(bufferCount, drawList->m_vertexCount - currentIndx);
 
             {
                 dg::MapHelper<Im3d::VertexData> vertexMap(&deviceContext, _geometryBuffer, 

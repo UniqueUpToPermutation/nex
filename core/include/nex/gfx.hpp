@@ -10,7 +10,7 @@ namespace dg = Diligent;
 
 #include <nex/glfw_env.hpp>
 
-namespace nex {
+namespace nex::gfx {
 
     struct GfxInitResult {
         dg::RefCntAutoPtr<dg::IRenderDevice> device;

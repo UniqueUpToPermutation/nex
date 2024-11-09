@@ -14,7 +14,7 @@
 
 namespace dg = Diligent;
 
-namespace nex {
+namespace nex::gfx {
     struct Im3dShaders {
 		dg::RefCntAutoPtr<dg::IShader> trianglesVS;
 		dg::RefCntAutoPtr<dg::IShader> pointsVS;
@@ -51,18 +51,16 @@ namespace nex {
 	class Im3dModule {
 	private:
 		dg::RefCntAutoPtr<dg::IBuffer> _geometryBuffer;
-		uint _bufferSize;
 
 	public:
-		Im3dModule() = default;
-		Im3dModule(dg::IRenderDevice& device, uint bufferSize = 500);
+		static constexpr uint kDefaultBufferSize = 500;
+
+		static Expected<Im3dModule> Create(dg::IRenderDevice& device, uint bufferSize = kDefaultBufferSize);
 
 		void Draw(dg::IDeviceContext& deviceContext,
 			Im3dPipeline& state,
 			Im3d::Context& im3dContext = Im3d::GetContext());
 
-		inline uint GetBufferSize() const {
-			return _bufferSize;
-		}
+		uint GetBufferCount() const;
 	};
 }

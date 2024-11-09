@@ -2,7 +2,13 @@
 
 using namespace nex;
 
-Expected<std::string_view> nex::EmbeddedFileLoader::Find(const std::filesystem::path& source) const {
+Expected<std::string_view> nex::IVirtualFileSystem::Find(const std::filesystem::path& source) const {
+    auto result = FindCStr(source);
+    NEX_EXP_RETURN(result.error());
+    return std::string_view{*result};
+}
+
+Expected<const char*> nex::EmbeddedFileLoader::FindCStr(const std::filesystem::path& source) const {
     auto searchSource = std::filesystem::relative(source, "");
     
     // Search internal shaders first

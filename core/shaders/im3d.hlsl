@@ -46,15 +46,13 @@ void main(in VS_INPUT vs_input, out VS_OUTPUT result)
     #endif
     
     #if !defined(LINES)
-    	result.m_position = apply(
-	        	gGlobals.mCamera.mViewProj,
-	        	float4(vs_input.m_positionSize.xyz, 1.0)
-	    );
+    	result.m_position = 
+	        	gGlobals.mCamera.mViewProj *
+	        	float4(vs_input.m_positionSize.xyz, 1.0);
     #else 
-	    result.m_position = apply(
-	        	gGlobals.mCamera.mView,
-	        	float4(vs_input.m_positionSize.xyz, 1.0)
-	    );
+	    result.m_position = 
+	        	gGlobals.mCamera.mView *
+	        	float4(vs_input.m_positionSize.xyz, 1.0);
     #endif
     
     result.m_size = max(vs_input.m_positionSize.w, kAntialiasing);
@@ -93,8 +91,8 @@ void main_lines(in line VS_OUTPUT gs_input[2], inout TriangleStream<GS_OUTPUT> r
     p1.z += Z_FLIP * gGlobals.mCamera.mNearZ;
     
     // Apply projection transformation
-    p0 = apply(gGlobals.mCamera.mProj, p0);
-    p1 = apply(gGlobals.mCamera.mProj, p1);
+    p0 = gGlobals.mCamera.mProj * p0;
+    p1 = gGlobals.mCamera.mProj * p1;
     
     float2 dir = p0.xy / p0.w - p1.xy / p1.w;
     // correct for aspect ratio

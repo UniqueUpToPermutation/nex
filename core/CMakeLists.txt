@@ -15,12 +15,12 @@ add_custom_command(
 
 add_library(nex-core ${MAIN_SOURCES} shader_rc.cpp)
 target_include_directories(nex-core PUBLIC ${HEADER_DIR})
-target_include_directories(nex-core PRIVATE ${SHADER_DIR})
+target_include_directories(nex-core PUBLIC ${SHADER_DIR})
 
-target_link_libraries(nex-core PRIVATE glm::glm)
-target_link_libraries(nex-core PRIVATE glfw)
-target_link_libraries(nex-core PRIVATE plog::plog)
-target_link_libraries(nex-core PRIVATE 
+target_link_libraries(nex-core PUBLIC glm::glm)
+target_link_libraries(nex-core PUBLIC glfw)
+target_link_libraries(nex-core PUBLIC plog::plog)
+target_link_libraries(nex-core PUBLIC 
     Diligent-GraphicsEngineVk-shared 
     Diligent-TargetPlatform 
     Diligent-PlatformInterface

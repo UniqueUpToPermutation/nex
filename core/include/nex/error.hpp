@@ -82,6 +82,10 @@ namespace nex {
         // Unwraps the expected object and stores the result in this
         template <typename T>
         T* Unwrap(ExpectedRef<T>&& ref);
+
+        inline static Error Ok() {
+            return {};
+        }
     };
 
     template <typename T>
