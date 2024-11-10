@@ -121,7 +121,7 @@ Expected<SpriteBatchPipeline> gfx::CreateSpriteBatchPipeline(
 
     dg::ImmutableSamplerDesc ImtblSamplers[] =
     {
-        {dg::SHADER_TYPE_PIXEL, "mTexture_sampler", SamDesc}
+        {dg::SHADER_TYPE_PIXEL, "mTexture", SamDesc}
     };
     PSODesc.ResourceLayout.NumImmutableSamplers = _countof(ImtblSamplers);
     PSODesc.ResourceLayout.ImmutableSamplers    = ImtblSamplers;
