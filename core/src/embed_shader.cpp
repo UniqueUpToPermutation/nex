@@ -46,7 +46,9 @@ Expected<dg::IShader*> gfx::CompileEmbeddedShader(
     info.Desc.UseCombinedTextureSamplers = true;
     info.SourceLanguage = dg::SHADER_SOURCE_LANGUAGE_HLSL;
     info.Source = fileContents;
-    info.Macros = dg::ShaderMacroArray{macros.data(), static_cast<dg::Uint32>(macros.size())};
+    if (!macros.empty()) {
+        info.Macros = dg::ShaderMacroArray{macros.data(), static_cast<dg::Uint32>(macros.size())};
+    }
     info.EntryPoint = params.entryPoint.c_str();
     
     dg::IShader* result = nullptr;

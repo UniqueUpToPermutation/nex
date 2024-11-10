@@ -23,11 +23,19 @@ Error Run() {
     auto psvFormat = gfx.swapChain->GetDepthBufferDSV()->GetDesc().Format;
 
     auto shaderSrc = gfx::GetEmbeddedShaders();
-    auto globalsBuffer = NEX_ERR_UNWRAP(gfx::DynamicUniformBuffer<hlsl::SceneGlobals>::Create(*gfx.device), err);
+    auto globalsCi = gfx::DynamicBufferCI::UniformBuffer();
+    auto globalsBuffer = gfx::DynamicBuffer<hlsl::SceneGlobals>::Create(*gfx.device, globalsCi);
 
     auto im3dShaders = NEX_ERR_UNWRAP(gfx::Im3dShaders::Create(*gfx.device, shaderSrc), err);
+    gfx::Im3dPipelineCI im3dCi{
+        .globals = globalsBuffer,
+        .shaders = im3dShaders,
+        .backbufferColorFormat = rtvFormat,
+        .backbufferDepthFormat = psvFormat,
+        .enableDepth = true
+    };
     auto im3dPipeline = NEX_ERR_UNWRAP(
-        gfx::Im3dPipeline::Create(*gfx.device, globalsBuffer, rtvFormat, psvFormat, 1, im3dShaders, true), err);
+        gfx::Im3dPipeline::Create(*gfx.device, im3dCi), err);
     auto im3dModule = NEX_ERR_UNWRAP(gfx::Im3dModule::Create(*gfx.device), err);
     
     Camera camera;

@@ -4,6 +4,7 @@
 #include <MapHelper.hpp>
 
 #include <cstring>
+#include <span>
 
 
 namespace nex::gfx {
@@ -15,7 +16,7 @@ namespace nex::gfx {
 		dg::RefCntAutoPtr<dg::IBuffer> 	_buffer;
 
 	public:
-		static Expected<StaticUniformBuffer<T>> Create(
+		static StaticUniformBuffer<T> Create(
             dg::IRenderDevice& device,
             dg::IDeviceContext& context,
             const std::vector<T>& data) {
@@ -34,7 +35,6 @@ namespace nex::gfx {
 
             dg::IBuffer* buf = nullptr;
 			device.CreateBuffer(desc, &dgData, &buf);
-			NEX_EXP_RETURN_IF(buf == nullptr, RuntimeError{"Failed to create static uniform buffer!"});
 
 			StaticUniformBuffer<T> result;
             result._buffer.Attach(buf);
@@ -50,74 +50,48 @@ namespace nex::gfx {
 		}
 	};
 
-	template <typename T>
-	class DynamicUniformBuffer {
-	private:
-		dg::RefCntAutoPtr<dg::IBuffer> _buffer;
+	struct DynamicBufferCI {
+		dg::BIND_FLAGS bindFlags = dg::BIND_UNIFORM_BUFFER;
+		dg::BUFFER_MODE mode = dg::BUFFER_MODE_UNDEFINED;
+		uint count = 1;
+		const char* name = "Dynamic Buffer";
 
-	public:
-		static Expected<DynamicUniformBuffer<T>> Create(
-			dg::IRenderDevice& device, 
-			const uint count = 1) {
-			dg::BufferDesc desc;
-			desc.Name           	= "Dynamic Uniform Buffer";
-			desc.Size  		  	    = sizeof(T) * count;
-			desc.Usage          	= dg::USAGE_DYNAMIC;
-			desc.BindFlags      	= dg::BIND_UNIFORM_BUFFER;
-			desc.CPUAccessFlags 	= dg::CPU_ACCESS_WRITE;
-
-            dg::IBuffer* buf = nullptr;
-			device.CreateBuffer(desc, nullptr, &buf);
-			NEX_EXP_RETURN_IF(buf == nullptr, RuntimeError{"Failed to create dynamic uniform buffer!"});
-
-			DynamicUniformBuffer<T> result;
-            result._buffer.Attach(buf);
-			return result;
+		inline static DynamicBufferCI UniformBuffer(uint count = 1) { 
+			return DynamicBufferCI{
+				.count = count, 
+				.name = "Dynamic Uniform Buffer"
+			}; 
 		}
-
-		inline size_t Count() const {
-			return _buffer->GetDesc().Size / sizeof(T);
-		}
-
-		inline dg::IBuffer* Get() {
-			return _buffer.RawPtr();
-		}
-
-		inline void Write(dg::IDeviceContext& context, const T& t) {
-			dg::MapHelper<T> data(&context, _buffer, dg::MAP_WRITE, dg::MAP_FLAG_DISCARD);
-			*data = t;
-		}
-
-		inline void Write(dg::IDeviceContext& context, const T t[], const uint count) {
-			dg::MapHelper<T> data(&context, _buffer, dg::MAP_WRITE, dg::MAP_FLAG_DISCARD);
-			std::memcpy(data, t, sizeof(T) * count);
+		inline static DynamicBufferCI VertexBuffer(uint count) { 
+			return DynamicBufferCI{
+				.bindFlags = dg::BIND_VERTEX_BUFFER,
+				.count = count, 
+				.name = "Dynamic Vertex Buffer"
+			}; 
 		}
 	};
 
 	template <typename T>
-	class DynamicStructuredBuffer {
+	class DynamicBuffer {
 	private:
 		dg::RefCntAutoPtr<dg::IBuffer> _buffer;
 
 	public:
-		Expected<DynamicStructuredBuffer<T>> Create(
-			dg::IRenderDevice& device, 
-			const uint count) {
-
+		static DynamicBuffer<T> Create(
+			dg::IRenderDevice& device,
+			DynamicBufferCI const& ci) {
 			dg::BufferDesc desc;
-			desc.Name           		= "Dyanmic Structured Buffer";
-			desc.Size  		  		    = sizeof(T) * count;
-			desc.Usage          		= dg::USAGE_DYNAMIC;
-			desc.BindFlags      		= dg::BIND_FLAGS::BIND_SHADER_RESOURCE;
-			desc.CPUAccessFlags 		= dg::CPU_ACCESS_WRITE;
-			desc.ElementByteStride 	    = sizeof(T);
-			desc.Mode 				    = dg::BUFFER_MODE::BUFFER_MODE_STRUCTURED;
+			desc.Name           	= "Dynamic Buffer";
+			desc.Size  		  	    = sizeof(T) * ci.count;
+			desc.Usage          	= dg::USAGE_DYNAMIC;
+			desc.BindFlags      	= ci.bindFlags;
+			desc.CPUAccessFlags 	= dg::CPU_ACCESS_WRITE;
+			desc.Mode				= ci.mode;
 
             dg::IBuffer* buf = nullptr;
 			device.CreateBuffer(desc, nullptr, &buf);
-			NEX_EXP_RETURN_IF(buf == nullptr, RuntimeError{"Failed to create dynamic structured buffer!"});
 
-			DynamicStructuredBuffer<T> result;
+			DynamicBuffer<T> result;
             result._buffer.Attach(buf);
 			return result;
 		}
@@ -130,18 +104,18 @@ namespace nex::gfx {
 			return _buffer.RawPtr();
 		}
 
-		inline dg::IBufferView* GetView() {
-			return _buffer->GetDefaultView(dg::BUFFER_VIEW_SHADER_RESOURCE);
+		inline dg::MapHelper<T> Map(dg::IDeviceContext& context) {
+			return dg::MapHelper<T>(&context, _buffer, dg::MAP_WRITE, dg::MAP_FLAG_DISCARD);
 		}
 
 		inline void Write(dg::IDeviceContext& context, const T& t) {
-			dg::MapHelper<T> data(&context, _buffer, dg::MAP_WRITE, dg::MAP_FLAG_DISCARD);
+			auto data = Map(context);
 			*data = t;
 		}
 
-		inline void Write(dg::IDeviceContext& context, const T t[], const uint count) {
-			dg::MapHelper<T> data(&context, _buffer, dg::MAP_WRITE, dg::MAP_FLAG_DISCARD);
-			std::memcpy(data, t, sizeof(T) * count);
-		}
+		inline void Write(dg::IDeviceContext& context, std::span<const T> t) {
+			auto data = Map(context);
+			std::memcpy(data, t.data(), sizeof(T) * t.size());
+		}		
 	};
 }

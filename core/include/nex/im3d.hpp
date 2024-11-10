@@ -30,6 +30,15 @@ namespace nex::gfx {
             IVirtualFileSystem& system);
 	};
 
+	struct Im3dPipelineCI {
+		DynamicBuffer<hlsl::SceneGlobals>& globals;
+		Im3dShaders& shaders;
+		dg::TEXTURE_FORMAT backbufferColorFormat;
+		dg::TEXTURE_FORMAT backbufferDepthFormat;
+		uint samples = 1;
+		bool enableDepth = true;
+	};
+
 	struct Im3dPipeline {
 		dg::RefCntAutoPtr<dg::IPipelineState> pipelineStateVertices;
 		dg::RefCntAutoPtr<dg::IPipelineState> pipelineStateLines;
@@ -39,13 +48,9 @@ namespace nex::gfx {
 		dg::RefCntAutoPtr<dg::IShaderResourceBinding> triangleSRB;
 		Im3dShaders shaders;
 
-        static Expected<Im3dPipeline> Create(dg::IRenderDevice& device,
-			DynamicUniformBuffer<hlsl::SceneGlobals>& globals,
-			dg::TEXTURE_FORMAT backbufferColorFormat,
-			dg::TEXTURE_FORMAT backbufferDepthFormat,
-			uint samples,
-			Im3dShaders& shaders,
-			bool enableDepth);
+        static Expected<Im3dPipeline> Create(
+			dg::IRenderDevice& device,
+			Im3dPipelineCI const& ci);
 	};
 
 	class Im3dModule {
@@ -55,7 +60,9 @@ namespace nex::gfx {
 	public:
 		static constexpr uint kDefaultBufferSize = 500;
 
-		static Expected<Im3dModule> Create(dg::IRenderDevice& device, uint bufferSize = kDefaultBufferSize);
+		static Expected<Im3dModule> Create(
+			dg::IRenderDevice& device, 
+			uint bufferSize = kDefaultBufferSize);
 
 		void Draw(dg::IDeviceContext& deviceContext,
 			Im3dPipeline& state,

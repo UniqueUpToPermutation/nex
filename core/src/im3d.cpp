@@ -126,15 +126,10 @@ Expected<Im3dShaders> Im3dShaders::Create(dg::IRenderDevice& device, IVirtualFil
 
 Expected<Im3dPipeline> Im3dPipeline::Create(
     dg::IRenderDevice& device,
-    DynamicUniformBuffer<hlsl::SceneGlobals>& globals,
-    dg::TEXTURE_FORMAT backbufferColorFormat,
-    dg::TEXTURE_FORMAT backbufferDepthFormat,
-    uint samples,
-    Im3dShaders& shaders,
-    bool bDepthEnable) {
+    Im3dPipelineCI const& ci) {
 
     Im3dPipeline result;
-    result.shaders = shaders;
+    result.shaders = ci.shaders;
 
     dg::GraphicsPipelineStateCreateInfo PSOCreateInfo;
     dg::PipelineStateDesc&              PSODesc          = PSOCreateInfo.PSODesc;
@@ -144,11 +139,11 @@ Expected<Im3dPipeline> Im3dPipeline::Create(
     PSODesc.PipelineType = dg::PIPELINE_TYPE_GRAPHICS;
 
     GraphicsPipeline.NumRenderTargets             = 1;
-    GraphicsPipeline.RTVFormats[0]                = backbufferColorFormat;
+    GraphicsPipeline.RTVFormats[0]                = ci.backbufferColorFormat;
     GraphicsPipeline.PrimitiveTopology            = dg::PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
     GraphicsPipeline.RasterizerDesc.CullMode      = dg::CULL_MODE_BACK;
-    GraphicsPipeline.DepthStencilDesc.DepthEnable = bDepthEnable;
-    GraphicsPipeline.DSVFormat 					  = backbufferDepthFormat;
+    GraphicsPipeline.DepthStencilDesc.DepthEnable = ci.enableDepth;
+    GraphicsPipeline.DSVFormat 					  = ci.backbufferDepthFormat;
 
     dg::RenderTargetBlendDesc blendState;
     blendState.BlendEnable = true;
@@ -162,7 +157,7 @@ Expected<Im3dPipeline> Im3dPipeline::Create(
     GraphicsPipeline.BlendDesc.RenderTargets[0] = blendState;
 
     // Number of MSAA samples
-    GraphicsPipeline.SmplDesc.Count = samples;
+    GraphicsPipeline.SmplDesc.Count = ci.samples;
 
     size_t stride = sizeof(Im3d::VertexData);
     size_t position_offset = offsetof(Im3d::VertexData, m_positionSize);
@@ -182,9 +177,9 @@ Expected<Im3dPipeline> Im3dPipeline::Create(
     GraphicsPipeline.InputLayout.NumElements = layoutElements.size();
     GraphicsPipeline.InputLayout.LayoutElements = &layoutElements[0];
 
-    PSOCreateInfo.pVS = shaders.trianglesVS.RawPtr();
+    PSOCreateInfo.pVS = ci.shaders.trianglesVS.RawPtr();
     PSOCreateInfo.pGS = nullptr;
-    PSOCreateInfo.pPS = shaders.trianglesPS.RawPtr();
+    PSOCreateInfo.pPS = ci.shaders.trianglesPS.RawPtr();
 
     PSODesc.ResourceLayout.DefaultVariableType = dg::SHADER_RESOURCE_VARIABLE_TYPE_STATIC;
 
@@ -194,13 +189,13 @@ Expected<Im3dPipeline> Im3dPipeline::Create(
 
     auto contextData = result.pipelineStateTriangles->GetStaticVariableByName(
         dg::SHADER_TYPE_VERTEX, "cbContextData");
-    contextData->Set(globals.Get());
+    contextData->Set(ci.globals.Get());
 
     // Line Pipeline
     GraphicsPipeline.PrimitiveTopology = dg::PRIMITIVE_TOPOLOGY_LINE_LIST;
-    PSOCreateInfo.pVS = shaders.linesVS;
-    PSOCreateInfo.pGS = shaders.linesGS;
-    PSOCreateInfo.pPS = shaders.linesPS;
+    PSOCreateInfo.pVS = ci.shaders.linesVS;
+    PSOCreateInfo.pGS = ci.shaders.linesGS;
+    PSOCreateInfo.pPS = ci.shaders.linesPS;
     PSODesc.Name = "Im3d Lines Pipeline";
 
     dg::IPipelineState* pipelineStateLines = nullptr;
@@ -209,17 +204,17 @@ Expected<Im3dPipeline> Im3dPipeline::Create(
 
     contextData = pipelineStateLines->GetStaticVariableByName(
         dg::SHADER_TYPE_VERTEX, "cbContextData");
-    contextData->Set(globals.Get());
+    contextData->Set(ci.globals.Get());
 
     contextData = pipelineStateLines->GetStaticVariableByName(
         dg::SHADER_TYPE_GEOMETRY, "cbContextData");
-    contextData->Set(globals.Get());				
+    contextData->Set(ci.globals.Get());				
 
     // Point Pipeline
     GraphicsPipeline.PrimitiveTopology = dg::PRIMITIVE_TOPOLOGY_POINT_LIST;
-    PSOCreateInfo.pVS = shaders.pointsVS;
-    PSOCreateInfo.pGS = shaders.pointsGS;
-    PSOCreateInfo.pPS = shaders.pointsPS;
+    PSOCreateInfo.pVS = ci.shaders.pointsVS;
+    PSOCreateInfo.pGS = ci.shaders.pointsGS;
+    PSOCreateInfo.pPS = ci.shaders.pointsPS;
     PSODesc.Name = "Im3d Points Pipeline";
 
     dg::IPipelineState* pipelineStateVertices = nullptr;
@@ -228,11 +223,11 @@ Expected<Im3dPipeline> Im3dPipeline::Create(
 
     contextData = pipelineStateVertices->GetStaticVariableByName(
         dg::SHADER_TYPE_VERTEX, "cbContextData");
-    contextData->Set(globals.Get());
+    contextData->Set(ci.globals.Get());
 
     contextData = pipelineStateVertices->GetStaticVariableByName(
         dg::SHADER_TYPE_GEOMETRY, "cbContextData");
-    contextData->Set(globals.Get());
+    contextData->Set(ci.globals.Get());
 
     dg::IShaderResourceBinding* vertBinding = nullptr;
     pipelineStateVertices->CreateShaderResourceBinding(&vertBinding, true);
