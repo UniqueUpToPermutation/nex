@@ -5,6 +5,7 @@
 #include <nex/gfx.hpp>
 #include <nex/sprite.hpp>
 #include <nex/embed_shader.hpp>
+#include <nex/camera.hpp>
 
 #include <imgui.h>
 
@@ -25,6 +26,8 @@ Error Run() {
     auto globalsCi = gfx::DynamicBufferCI::UniformBuffer();
     auto globalsBuffer = gfx::DynamicBuffer<hlsl::SceneGlobals>::Create(*gfx.device, globalsCi);
 
+    auto camera = Camera();
+
     gfx::SpriteBatchPipelineCI ci{
         .shaders = shaders,
         .globals = globalsBuffer,
@@ -37,6 +40,11 @@ Error Run() {
 
     while (!env.ShouldClose()) {
         env.MessagePump();
+
+        globalsBuffer.Write(*gfx.context, hlsl::SceneGlobals{
+            .mCamera = camera.AsCameraAttribs(
+                gfx.swapChain->GetDesc().Width, gfx.swapChain->GetDesc().Height)
+        });
 
         auto* pRTV = gfx.swapChain->GetCurrentBackBufferRTV();
         auto* pDSV = gfx.swapChain->GetDepthBufferDSV();

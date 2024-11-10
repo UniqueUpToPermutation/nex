@@ -50,7 +50,7 @@ Expected<SpriteShaders> SpriteShaders::Create(
     return shaders;
 }
 
-Expected<dg::RefCntAutoPtr<dg::IPipelineState>> gfx::CreateSpriteBatchPipeline(
+Expected<SpriteBatchPipeline> gfx::CreateSpriteBatchPipeline(
     dg::IRenderDevice& device,
     SpriteBatchPipelineCI const& ci) {
     dg::SamplerDesc SamDesc
@@ -134,7 +134,8 @@ Expected<dg::RefCntAutoPtr<dg::IPipelineState>> gfx::CreateSpriteBatchPipeline(
     NEX_EXP_RETURN_IF(globalVar == nullptr, RuntimeError{"cbContextData not defined in shader!"});
 
     globalVar->Set(ci.globals.Get());
-    return pso;
+
+    return SpriteBatchPipeline{pso};
 }
 
 SpriteBatchBindings gfx::CreateSpriteBatchBindings(dg::IPipelineState& pso) {
@@ -151,10 +152,10 @@ SpriteBatchBindings gfx::CreateSpriteBatchBindings(dg::IPipelineState& pso) {
 Expected<SpriteBatchRequirements> SpriteBatchRequirements::Create(
     dg::IRenderDevice& device, SpriteBatchPipelineCI const& ci) {
     Error err;
-    auto pso = NEX_EXP_UNWRAP(CreateSpriteBatchPipeline(device, ci), err);
+    auto pipeline = NEX_EXP_UNWRAP(CreateSpriteBatchPipeline(device, ci), err);
     return SpriteBatchRequirements{
-        .pso = pso,
-        .bindings = CreateSpriteBatchBindings(*pso)
+        .pipeline = pipeline,
+        .bindings = CreateSpriteBatchBindings(*pipeline.pso)
     };
 }
 
@@ -193,14 +194,14 @@ void SpriteBatch::Begin(
     dg::IDeviceContext& context,
     SpriteBatchRequirements& requirements) {
     Begin(context,
-        *requirements.pso,
+        *requirements.pipeline.pso,
         *requirements.bindings.shaderBinding,
         *requirements.bindings.textureVariable);
 }
 
 void SpriteBatch::Flush(bool shouldRemap) {
     if (!groups.empty()) {
-        map = {};
+        map.Unmap();
 
         for (auto const& group : groups) {
             textureVariable->Set(group.texture.GetDefaultView(dg::TEXTURE_VIEW_SHADER_RESOURCE));
@@ -217,6 +218,8 @@ void SpriteBatch::Flush(bool shouldRemap) {
         if (shouldRemap) {
             map = buffer.Map(*currentContext);
         }
+    } else if (!shouldRemap) {
+        map.Unmap();
     }
 }
 

@@ -35,7 +35,11 @@ namespace nex::gfx {
         uint samples = 1;
     };
 
-    Expected<dg::RefCntAutoPtr<dg::IPipelineState>> CreateSpriteBatchPipeline(
+	struct SpriteBatchPipeline {
+		dg::RefCntAutoPtr<dg::IPipelineState> pso;
+	};
+
+    Expected<SpriteBatchPipeline> CreateSpriteBatchPipeline(
         dg::IRenderDevice& device,
         SpriteBatchPipelineCI const& ci);
 
@@ -47,7 +51,7 @@ namespace nex::gfx {
     SpriteBatchBindings CreateSpriteBatchBindings(dg::IPipelineState& pso);
 
     struct SpriteBatchRequirements {
-        dg::RefCntAutoPtr<dg::IPipelineState> pso;
+        SpriteBatchPipeline pipeline;
         SpriteBatchBindings bindings;
 
         static Expected<SpriteBatchRequirements> Create(
