@@ -6,6 +6,7 @@
 #include <nex/sprite.hpp>
 #include <nex/embed_shader.hpp>
 #include <nex/camera.hpp>
+#include <nex/gfx_texture.hpp>
 
 #include <imgui.h>
 
@@ -26,7 +27,9 @@ Error Run() {
     auto globalsCi = gfx::DynamicBufferCI::UniformBuffer();
     auto globalsBuffer = gfx::DynamicBuffer<hlsl::SceneGlobals>::Create(*gfx.device, globalsCi);
 
-    auto camera = Camera();
+    auto textureBuffer = texture::prefabs::CheckerBoard(128, 128, 8, 8);
+    auto gpuTexture = gfx::UploadToGpu(*gfx.device, *gfx.context, textureBuffer);
+    textureBuffer = {};
 
     gfx::SpriteBatchPipelineCI ci{
         .shaders = shaders,
@@ -41,9 +44,17 @@ Error Run() {
     while (!env.ShouldClose()) {
         env.MessagePump();
 
+        auto backbufferWidth = static_cast<float>(gfx.swapChain->GetDesc().Width);
+        auto backbufferHeight = static_cast<float>(gfx.swapChain->GetDesc().Height);
+
+        auto camera = Camera{
+            .projection = OrthoProjection{
+                .width = backbufferWidth,
+                .height = backbufferHeight
+            },
+        };
         globalsBuffer.Write(*gfx.context, hlsl::SceneGlobals{
-            .mCamera = camera.AsCameraAttribs(
-                gfx.swapChain->GetDesc().Width, gfx.swapChain->GetDesc().Height)
+            .mCamera = camera.AsCameraAttribs(backbufferWidth, backbufferHeight)
         });
 
         auto* pRTV = gfx.swapChain->GetCurrentBackBufferRTV();
@@ -55,6 +66,9 @@ Error Run() {
         gfx.context->ClearDepthStencil(pDSV, dg::CLEAR_DEPTH_FLAG, 1.f, 0, dg::RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
         spriteBatch.Begin(*gfx.context, spriteReqs);
+        spriteBatch.Draw(*gpuTexture, glm::vec2(0.0, 0.0), glm::vec2(64.0, 64.0), 1.0);
+        spriteBatch.Draw(*gpuTexture, glm::vec2(128.0, 128.0), glm::vec2(64.0, 64.0), 0.5);
+        spriteBatch.Draw(*gpuTexture, glm::vec2(256.0, 256.0), glm::vec2(64.0, 64.0), 2.0);
         spriteBatch.End();
 
         gfx.swapChain->Present();
